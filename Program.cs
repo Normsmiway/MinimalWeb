@@ -63,7 +63,7 @@ app.MapGet("/", () => Handler.Greet()).ExcludeFromDescription();
 
 //Get all books
 app.MapGet("/books", async (BookDb db) => await db.Books.ToListAsync())
-    .Produces<List<Book>>(StatusCodes.Status200OK).WithName("GetAllBooks").WithTags("Getters");
+    .Produces<List<Book>>(StatusCodes.Status200OK).WithName("GetAllBooks").WithTags("Queries");
 
 //create new book
 app.MapPost("/books",
@@ -76,7 +76,7 @@ async ([FromBody] Book addbook, [FromServices] BookDb db, HttpResponse response)
 })
 .Accepts<Book>("application/json")
 .Produces<Book>(StatusCodes.Status201Created)
-.WithName("AddNewBook").WithTags("Setters");
+.WithName("AddNewBook").WithTags("Commands");
 
 //update book
 app.MapPut("/books",
@@ -94,13 +94,13 @@ app.MapPut("/books",
     return Results.Created("/books", mybook);
 })
     .Produces<Book>(StatusCodes.Status201Created).Produces(StatusCodes.Status404NotFound)
-    .WithName("UpdateBook").WithTags("Setters");
+    .WithName("UpdateBook").WithTags("Commands");
 
 //get book by Id
 app.MapGet("/books/{id}", async (BookDb db, int id) =>
 await db.Books.SingleOrDefaultAsync(s => s.Id == id) is Book mybook ? Results.Ok(mybook) : Results.NotFound())
     .Produces<Book>(StatusCodes.Status200OK)
-    .WithName("GetBookbyId").WithTags("Getters");
+    .WithName("GetBookbyId").WithTags("Queries");
 
 //search book by title
 app.MapGet("/books/search/{query}",
@@ -110,7 +110,7 @@ app.MapGet("/books/search/{query}",
     return _selectedBooks.Count > 0 ? Results.Ok(_selectedBooks) : Results.NotFound(Array.Empty<Book>());
 })
     .Produces<List<Book>>(StatusCodes.Status200OK)
-    .WithName("Search").WithTags("Getters");
+    .WithName("Search").WithTags("Queries");
 
 //get paginated book list
 
@@ -118,7 +118,7 @@ app.MapGet("/books/bypage", async (int pageNumber, int pageSize, BookDb db) =>
 await db.Books
 .Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync())
     .Produces<List<Book>>(StatusCodes.Status200OK)
-    .WithName("GetBooksByPage").WithTags("Getters");
+    .WithName("GetBooksByPage").WithTags("Queries");
 
 //generate auth token
 app.MapPost("/auth/token", [AllowAnonymous] async ([FromBodyAttribute] UserModel userModel,
