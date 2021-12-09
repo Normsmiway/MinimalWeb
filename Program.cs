@@ -56,13 +56,16 @@ builder.Services.AddDbContext<BookDb>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("MinimalContext"));
 });
 
-
+//build app
 var app = builder.Build();
 
 app.MapGet("/", () => Handler.Greet()).ExcludeFromDescription();
+
+//Get all books
 app.MapGet("/books", async (BookDb db) => await db.Books.ToListAsync())
     .Produces<List<Book>>(StatusCodes.Status200OK).WithName("GetAllBooks").WithTags("Getters");
 
+//create new book
 app.MapPost("/books",
 async ([FromBody] Book addbook, [FromServices] BookDb db, HttpResponse response) =>
 {
@@ -75,7 +78,7 @@ async ([FromBody] Book addbook, [FromServices] BookDb db, HttpResponse response)
 .Produces<Book>(StatusCodes.Status201Created)
 .WithName("AddNewBook").WithTags("Setters");
 
-
+//update book
 app.MapPut("/books",
 [AllowAnonymous] async (int id, string title, short price, long
  isbn, int year, [FromServices] BookDb db, HttpResponse response) =>
@@ -90,38 +93,35 @@ app.MapPut("/books",
     await db.SaveChangesAsync();
     return Results.Created("/books", mybook);
 })
-.Produces<Book>(StatusCodes.Status201Created).Produces(StatusCodes.Status404NotFound)
-.WithName("UpdateBook").WithTags("Setters");
+    .Produces<Book>(StatusCodes.Status201Created).Produces(StatusCodes.Status404NotFound)
+    .WithName("UpdateBook").WithTags("Setters");
 
-
+//get book by Id
 app.MapGet("/books/{id}", async (BookDb db, int id) =>
-await db.Books.SingleOrDefaultAsync(s => s.Id == id) is Book mybook ? Results.Ok(mybook) : Results.NotFound()
-)
-.Produces<Book>(StatusCodes.Status200OK)
-.WithName("GetBookbyId").WithTags("Getters");
+await db.Books.SingleOrDefaultAsync(s => s.Id == id) is Book mybook ? Results.Ok(mybook) : Results.NotFound())
+    .Produces<Book>(StatusCodes.Status200OK)
+    .WithName("GetBookbyId").WithTags("Getters");
 
-
+//search book by title
 app.MapGet("/books/search/{query}",
 (string query, BookDb db) =>
 {
     var _selectedBooks = db.Books.Where(x => x.Title.ToLower().Contains(query.ToLower())).ToList();
     return _selectedBooks.Count > 0 ? Results.Ok(_selectedBooks) : Results.NotFound(Array.Empty<Book>());
 })
-.Produces<List<Book>>(StatusCodes.Status200OK)
-.WithName("Search").WithTags("Getters");
+    .Produces<List<Book>>(StatusCodes.Status200OK)
+    .WithName("Search").WithTags("Getters");
 
-
+//get paginated book list
 
 app.MapGet("/books/bypage", async (int pageNumber, int pageSize, BookDb db) =>
 await db.Books
-.Skip((pageNumber - 1) * pageSize)
-.Take(pageSize)
-.ToListAsync()
-)
-.Produces<List<Book>>(StatusCodes.Status200OK)
-.WithName("GetBooksByPage").WithTags("Getters");
+.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync())
+    .Produces<List<Book>>(StatusCodes.Status200OK)
+    .WithName("GetBooksByPage").WithTags("Getters");
 
-app.MapPost("/login", [AllowAnonymous] async ([FromBodyAttribute] UserModel userModel,
+//generate auth token
+app.MapPost("/auth/token", [AllowAnonymous] async ([FromBodyAttribute] UserModel userModel,
 TokenService tokenService, IUserRepositoryService userRepositoryService, HttpResponse response) =>
 {
     var userDto = userRepositoryService.GetUser(userModel);
@@ -133,14 +133,15 @@ TokenService tokenService, IUserRepositoryService userRepositoryService, HttpRes
     var token = tokenService.BuildToken(userDto);
     await response.WriteAsJsonAsync(new { token = token });
     return;
-}).Produces(StatusCodes.Status200OK)
-.WithName("Login").WithTags("Accounts");
+})
+    .Produces(StatusCodes.Status200OK)
+    .WithName("Login").WithTags("Accounts");
 
-
+//authenticated resource
 app.MapGet("/AuthorizedResource", (Func<string>)(
-[Authorize] () => "Action Succeeded")
-).Produces(StatusCodes.Status200OK)
-.WithName("Authorized").WithTags("Accounts").RequireAuthorization();
+[Authorize] () => "Action Succeeded"))
+    .Produces(StatusCodes.Status200OK)
+    .WithName("Authorized").WithTags("Accounts").RequireAuthorization();
 
 app.UseSwagger();
 app.UseSwaggerUI();
