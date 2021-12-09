@@ -13,20 +13,30 @@ namespace MinimalWeb.Services
     }
     public class TokenService : ITokenService
     {
+        private readonly string _key;
+        private readonly string _audience;
+        private readonly SymmetricSecurityKey _securityKey;
+        private readonly SigningCredentials _credentials;
+        private readonly string _issuer;
         private readonly TimeSpan ExpiryDuration = new(0, 30, 0);
-        private readonly IConfiguration configuration;
 
         public TokenService(IConfiguration configuration)
         {
-            this.configuration = configuration;
+            _key = configuration["Jwt:Key"];
+            _issuer = configuration["Jwt:Issuer"];
+            _audience = configuration["Jwt:Audience"];
+
+            _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_key));
+            _credentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256Signature);
+
         }
         public string BuildToken(UserDto user)
         {
-            var claims = new[] { new Claim(ClaimTypes.Name, user.UserName), new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()) };
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
-            var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature);
-            var tokenDescriptor = new JwtSecurityToken(configuration["Jwt:Issuer"], configuration["Jwt:Audience"],
-                claims, expires: DateTime.Now.Add(ExpiryDuration), signingCredentials: credentials);
+            var claims = new[] { new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()) };
+
+            var tokenDescriptor = new JwtSecurityToken(_issuer, _audience,
+                     claims, expires: DateTime.Now.Add(ExpiryDuration), signingCredentials: _credentials);
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
     }
